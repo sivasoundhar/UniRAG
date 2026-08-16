@@ -1,0 +1,35 @@
+# CI only — runs the pytest smoke suite on every push/PR. No deploy step
+# here: Render auto-deploys from GitHub natively (see render.yaml), so
+# this workflow's only job is being a real quality gate before that
+# happens, not a second deploy mechanism.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # OCR test needs the real tesseract binary, same as Dockerfile.
+      - name: Install tesseract-ocr
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run smoke tests
+        env:
+          # Optional — if set as a repo secret, the live-LLM chat test
+          # runs for real; otherwise it skips cleanly (see tests/test_api.py).
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: pytest -q

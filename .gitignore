@@ -1,0 +1,32 @@
+# Secrets — real API keys live here, never committed.
+.env
+
+# Virtual environments
+venv/
+.venv/
+
+# Python bytecode caches
+__pycache__/
+*.pyc
+
+# Runtime data — uploaded files and the derived vector index are
+# regenerated, not source; see CLAUDE.md §10.
+data/uploads/
+data/chroma_db/
+
+# Test/tool caches
+.pytest_cache/
+
+# Logs
+*.log
+
+# Streamlit local state
+.streamlit/
+
+# Editor/OS cruft
+.vscode/
+.idea/
+.DS_Store
+
+# Claude Code local tool state — session/machine-specific, not project source.
+.claude/

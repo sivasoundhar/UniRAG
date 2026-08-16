@@ -1,0 +1,48 @@
+services:
+  # UniRAG API — the whole RAG pipeline (upload/chat/search/health) runs in
+  # this one FastAPI process; no separate worker/queue/DB service exists yet.
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Overrides for this dev machine's known network block (HTTPS to
+      # huggingface.co and api.groq.com both fail here — see CLAUDE.md §12):
+      # HF models load from the mounted cache instead of downloading, and
+      # the LLM provider defaults to the host's Ollama instead of Groq.
+      # None of this is needed on a machine with normal network access —
+      # there, .env's LLM_PROVIDER=groq is what actually runs.
+      - HF_HUB_OFFLINE=1
+      - TRANSFORMERS_OFFLINE=1
+      - LLM_PROVIDER=ollama
+      - OLLAMA_HOST=http://host.docker.internal:11434
+    volumes:
+      # Uploaded files and the persistent Chroma index survive a container
+      # restart/rebuild, and stay visible/inspectable from the host.
+      - ./data:/app/data
+      # Reuses this machine's already-downloaded BGE/cross-encoder models
+      # instead of re-downloading them inside the container (Windows path —
+      # a Linux/Mac dev machine would use ~/.cache/huggingface instead).
+      - ${USERPROFILE}/.cache/huggingface:/root/.cache/huggingface
+    extra_hosts:
+      # host.docker.internal resolves out of the box on Docker Desktop
+      # (Windows/Mac) but not on native Linux hosts — this makes the
+      # OLLAMA_HOST override above work regardless of host OS.
+      - "host.docker.internal:host-gateway"
+
+  # UniRAG UI (Day 7) — thin Streamlit client, talks to `app` only over
+  # HTTP via API_BASE_URL. No shared volumes/env with `app` beyond that URL:
+  # see streamlit_app/app.py's docstring for why it stays a separate,
+  # much smaller image with no ML dependencies of its own.
+  streamlit:
+    build: ./streamlit_app
+    ports:
+      - "8501:8501"
+    environment:
+      # "app" here is the other service's name — Compose's built-in DNS
+      # resolves it to that container's address on the shared network.
+      - API_BASE_URL=http://app:8000
+    depends_on:
+      - app

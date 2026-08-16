@@ -1,0 +1,57 @@
+# Render Blueprint — two services built from the existing Dockerfiles.
+# This is what makes deploy "CD without GitHub Actions": once you connect
+# this repo in the Render dashboard, every push to main auto-deploys both
+# services natively. GROQ_API_KEY is `sync: false` — Render will prompt
+# you to enter it in the dashboard rather than reading it from this file
+# or from git, so it's never committed.
+#
+# Known limitation: Render's free tier has an ephemeral filesystem, so
+# CHROMA_PERSIST_DIR does not survive a restart/redeploy without the
+# (paid) persistent disk below. Uncomment the `disk:` block on unirag-api
+# if the demo needs uploaded documents to persist between sessions.
+
+services:
+  - type: web
+    name: unirag-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: LLM_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false
+      - key: CHROMA_PERSIST_DIR
+        value: ./data/chroma_db
+      - key: TESSERACT_CMD
+        value: /usr/bin/tesseract
+      - key: EMBEDDING_MODEL
+        value: BAAI/bge-small-en-v1.5
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+    # disk:
+    #   name: unirag-chroma-data
+    #   mountPath: /app/data
+    #   sizeGB: 1
+
+  - type: web
+    name: unirag-ui
+    runtime: docker
+    dockerfilePath: ./streamlit_app/Dockerfile
+    dockerContext: ./streamlit_app
+    envVars:
+      # `fromService` auto-wires this to unirag-api's address once both
+      # services exist in the same Render Blueprint — I can't verify this
+      # resolves to a full https:// URL (vs. a bare hostname) against a
+      # live Render account from here, so check the unirag-ui service's
+      # environment tab after first deploy: if API_BASE_URL isn't a
+      # working https URL, set it manually there to unirag-api's public
+      # Render URL instead.
+      - key: API_BASE_URL
+        fromService:
+          type: web
+          name: unirag-api
+          property: host

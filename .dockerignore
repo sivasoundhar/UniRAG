@@ -1,0 +1,21 @@
+# Local dev venv — the image installs its own deps via requirements.txt.
+venv/
+.venv/
+
+# Bytecode caches — regenerated at runtime, no reason to ship them.
+__pycache__/
+*.pyc
+
+# Data is volume-mounted at runtime (see docker-compose.yml), not baked
+# into the image — keeps the image small and avoids shipping uploaded
+# files or a stale copy of the vector index.
+data/
+
+# Secrets — injected at runtime via docker-compose's env_file, never baked
+# into an image layer.
+.env
+
+# Not needed inside the container.
+.git/
+tests/
+*.md
