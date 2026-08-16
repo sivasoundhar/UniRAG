@@ -9,7 +9,12 @@ Wire app/graph/nodes.py into a compiled LangGraph pipeline.
  └────┬─────┘
       ▼
  ┌──────────┐
- │ retrieve │   dense (Chroma) + BM25 search on the rewritten query
+ │  expand  │   LLM generates N alternate phrasings (best-effort — [] on failure)
+ └────┬─────┘
+      ▼
+ ┌──────────┐
+ │ retrieve │   dense (Chroma) + BM25, on rewritten query AND every expansion,
+ │          │   RRF-merged per retriever back into one dense/one BM25 list
  └────┬─────┘
       ▼
  ┌──────────┐
@@ -57,6 +62,7 @@ from langgraph.graph import END, START, StateGraph
 
 from app.graph.nodes import (
     compress_node,
+    expand_node,
     fuse_node,
     generate_node,
     rerank_node,
@@ -81,6 +87,7 @@ def build_graph():
     graph = StateGraph(GraphState)
 
     graph.add_node("rewrite", rewrite_node)
+    graph.add_node("expand", expand_node)
     graph.add_node("retrieve", retrieve_node)
     graph.add_node("fuse", fuse_node)
     graph.add_node("rerank", rerank_node)
@@ -89,7 +96,8 @@ def build_graph():
     graph.add_node("save_turn", save_turn_node)
 
     graph.add_edge(START, "rewrite")
-    graph.add_edge("rewrite", "retrieve")
+    graph.add_edge("rewrite", "expand")
+    graph.add_edge("expand", "retrieve")
     graph.add_edge("retrieve", "fuse")
     graph.add_edge("fuse", "rerank")
     graph.add_edge("rerank", "compress")
@@ -136,7 +144,8 @@ if __name__ == "__main__":
 
     from app.retrieval.vector_store import VectorStore
 
-    VectorStore().add_documents([
+    store = VectorStore()
+    store.add_documents([
         Document(page_content="Reciprocal rank fusion (RRF) merges a dense retriever's ranked list and a BM25 retriever's ranked list into one combined ranking.", metadata={"source": "rrf_intro.txt"}),
         Document(page_content="RRF uses each document's rank position, not its raw score, because BM25 and cosine similarity scores live on unrelated scales.", metadata={"source": "rrf_why_rank.txt"}),
     ])
@@ -147,14 +156,31 @@ if __name__ == "__main__":
     turn_1 = run_turn(app_graph, conversation_id, "What is reciprocal rank fusion?")
     print(f"Turn 1 query:     {turn_1['query']!r}")
     print(f"Turn 1 rewritten: {turn_1['rewritten_query']!r}")
-    print(f"Turn 1 answer:    {turn_1['answer']!r}\n")
+    print(f"Turn 1 expanded:  {turn_1['expanded_queries']!r}")
+    print(f"Turn 1 answer:    {turn_1['answer']!r}")
+    print(f"Turn 1 answered by: {turn_1['answer_provider']}/{turn_1['answer_model']}\n")
 
     turn_2 = run_turn(app_graph, conversation_id, "Why does it use rank instead of raw score?")
     print(f"Turn 2 query:     {turn_2['query']!r}")
     print(f"Turn 2 rewritten: {turn_2['rewritten_query']!r}")
+    print(f"Turn 2 expanded:  {turn_2['expanded_queries']!r}")
     print(f"Turn 2 answer:    {turn_2['answer']!r}")
+    print(f"Turn 2 answered by: {turn_2['answer_provider']}/{turn_2['answer_model']}")
+
+    assert "expanded_queries" in turn_1 and "expanded_queries" in turn_2, "expand_node should always set this key, even to []"
+    assert turn_1["answer_model"] and turn_1["answer_provider"], "generate_node should always report which model answered"
 
     assert "rrf" in turn_2["rewritten_query"].lower() or "reciprocal rank fusion" in turn_2["rewritten_query"].lower(), (
         "turn 2's rewrite should have resolved 'it' using turn 1's history"
     )
     print("\nOK: turn 2's pronoun resolved using turn 1's history — memory carried context.")
+
+    # This self-test runs against the real persistent Chroma collection (no
+    # temp/mock store), so without this it silently leaves rrf_intro.txt/
+    # rrf_why_rank.txt behind on every run — duplicating on each re-run and
+    # polluting whatever real corpus is indexed alongside it. Not a
+    # hypothetical: running this twice while wiring in query expansion did
+    # exactly that to a real, in-use corpus, caught only because a later
+    # unrelated self-test's assertion on an exact chunk count failed.
+    for source in ("rrf_intro.txt", "rrf_why_rank.txt"):
+        store.delete_by_source(source)

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>UniRAG — Demo UI v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0D1117; --panel:#141A22; --panel-2:#1A222D; --line:#262F3D;
+    --text:#E9ECF1; --muted:#6E7787; --accent:#4FD1C5; --accent-glow:rgba(79,209,197,.35);
+    --accent-dim:#23433F; --amber:#F0B429;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:radial-gradient(circle at 15% 0%, rgba(79,209,197,.06), transparent 40%), var(--bg);
+       color:var(--text); font-family:'Inter',sans-serif; display:flex;}
+  .sidebar{width:250px; background:var(--panel); border-right:1px solid var(--line); padding:22px 18px; display:flex; flex-direction:column; gap:22px;}
+  .brand{display:flex; align-items:center; gap:9px;}
+  .brand-mark{width:30px;height:30px;border-radius:7px;background:linear-gradient(145deg,var(--accent),var(--accent-dim));
+    display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono';font-weight:600;font-size:12px;color:#0A0F14;
+    box-shadow:0 0 16px var(--accent-glow);}
+  .brand-name{font-family:'Space Grotesk';font-weight:600;font-size:16px;}
+  .status-row{display:flex;align-items:center;gap:6px;margin-top:2px;}
+  .status-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);}
+  .status-text{font-family:'IBM Plex Mono';font-size:10px;color:var(--muted);}
+  .section-label{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .nav-item{padding:8px 10px;border-radius:7px;font-size:13px;color:var(--muted);margin-bottom:4px;}
+  .nav-item.active{background:var(--panel-2);color:var(--text);border:1px solid var(--line);}
+  .sample-docs{font-family:'IBM Plex Mono';font-size:10px;color:var(--muted);line-height:1.9;}
+  .sample-docs .dot{color:var(--accent);}
+  .stack-note{margin-top:auto;font-family:'IBM Plex Mono';font-size:9.5px;color:var(--muted);line-height:1.8;border-top:1px solid var(--line);padding-top:12px;}
+  .stack-note .row{display:flex;justify-content:space-between;}
+  .stack-note span{color:var(--accent);}
+
+  .main{flex:1;max-width:960px;padding:24px 30px;}
+
+  /* How it works panel */
+  .how-panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:20px;}
+  .how-title{font-family:'Space Grotesk';font-size:14px;font-weight:600;margin-bottom:3px;}
+  .how-sub{font-size:11.5px;color:var(--muted);margin-bottom:14px;}
+  .how-steps{display:flex;align-items:center;gap:0;flex-wrap:wrap;}
+  .how-step{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:90px;}
+  .how-icon{width:34px;height:34px;border-radius:9px;background:var(--panel-2);border:1px solid var(--accent-dim);
+    display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:14px;}
+  .how-label{font-family:'IBM Plex Mono';font-size:10px;color:var(--text);text-align:center;}
+  .how-desc{font-size:9.5px;color:var(--muted);text-align:center;max-width:100px;}
+  .how-arrow{color:var(--line);font-size:13px;margin:0 2px 26px;}
+
+  .msg-block{margin-bottom:20px;}
+  .user-bubble{background:var(--panel-2);border:1px solid var(--line);border-radius:12px 12px 3px 12px;
+    padding:11px 15px;font-size:14px;max-width:520px;margin-left:auto;margin-bottom:14px;}
+
+  .pipeline{display:flex;align-items:center;gap:5px;margin-bottom:12px;flex-wrap:wrap;}
+  .stage{font-family:'IBM Plex Mono';font-size:10px;padding:4px 9px;border-radius:5px;border:1px solid var(--accent-dim);
+    color:var(--accent);background:rgba(79,209,197,.08);}
+  .stage-arrow{color:var(--line);font-size:10px;}
+  .answer{border-left:2px solid var(--accent);padding-left:15px;font-size:14px;line-height:1.55;margin-bottom:14px;}
+
+  /* Retrieval proof panel */
+  .proof-panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+  .proof-title{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--amber);margin-bottom:10px;}
+  table{width:100%;border-collapse:collapse;font-size:11px;}
+  th{font-family:'IBM Plex Mono';font-weight:500;color:var(--muted);text-align:left;padding:5px 8px;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--line);}
+  td{padding:7px 8px;border-bottom:1px solid #1D242F;color:var(--text);}
+  .chunk-name{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--text);}
+  .rank-badge{font-family:'IBM Plex Mono';font-size:10px;padding:2px 7px;border-radius:4px;background:var(--panel-2);color:var(--muted);}
+  .rank-badge.top{color:var(--accent);border:1px solid var(--accent-dim);}
+  .fused-badge{font-family:'IBM Plex Mono';font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(240,180,41,.12);color:var(--amber);font-weight:500;}
+
+  .inputbar{margin-top:18px;display:flex;align-items:center;gap:10px;background:var(--panel);
+    border:1px solid var(--line);border-radius:10px;padding:5px 5px 5px 15px;}
+  .inputbar input{flex:1;background:transparent;border:none;color:var(--text);font-size:13.5px;padding:9px 0;}
+  .send-btn{background:var(--accent);color:#0A0F14;border:none;border-radius:6px;padding:8px 15px;
+    font-weight:600;font-size:12.5px;font-family:'Space Grotesk';}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="brand">
+    <div class="brand-mark">UR</div>
+    <div>
+      <div class="brand-name">UniRAG</div>
+      <div class="status-row"><span class="status-dot"></span><span class="status-text">core online · demo mode</span></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-label">Navigate</div>
+    <div class="nav-item active">💬 Chat</div>
+    <div class="nav-item">🔍 Search &amp; Retrieval</div>
+    <div class="nav-item">📤 Upload</div>
+  </div>
+
+  <div>
+    <div class="section-label">Pre-loaded corpus</div>
+    <div class="sample-docs">
+      <span class="dot">●</span> bracket_assembly_spec.pdf<br>
+      <span class="dot">●</span> fastener_standards.docx<br>
+      <span class="dot">●</span> diabetes_guidelines.pdf
+    </div>
+  </div>
+
+  <div class="stack-note">
+    <div class="row"><span>retrieval</span><span>hybrid+RRF</span></div>
+    <div class="row"><span>rerank</span><span>cross-encoder</span></div>
+    <div class="row"><span>llm</span><span>groq/ollama</span></div>
+    <div class="row"><span>guardrails</span><span>active</span></div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- #1 How it works panel -->
+  <div class="how-panel">
+    <div class="how-title">How this works</div>
+    <div class="how-sub">Every answer below runs through this pipeline — nothing is a plain LLM call</div>
+    <div class="how-steps">
+      <div class="how-step"><div class="how-icon">✎</div><div class="how-label">rewrite</div><div class="how-desc">clean up raw query</div></div>
+      <div class="how-arrow">→</div>
+      <div class="how-step"><div class="how-icon">⇄</div><div class="how-label">hybrid retrieve</div><div class="how-desc">BM25 + dense, RRF fused</div></div>
+      <div class="how-arrow">→</div>
+      <div class="how-step"><div class="how-icon">↕</div><div class="how-label">rerank</div><div class="how-desc">cross-encoder reorder</div></div>
+      <div class="how-arrow">→</div>
+      <div class="how-step"><div class="how-icon">▤</div><div class="how-label">compress</div><div class="how-desc">trim to relevant context</div></div>
+      <div class="how-arrow">→</div>
+      <div class="how-step"><div class="how-icon">✓</div><div class="how-label">guardrails</div><div class="how-desc">PII / toxicity check</div></div>
+    </div>
+  </div>
+
+  <div class="msg-block">
+    <div class="user-bubble">What's the recommended torque spec for the M8 mounting bolts?</div>
+
+    <div class="pipeline">
+      <span class="stage">rewrite</span><span class="stage-arrow">→</span>
+      <span class="stage">hybrid retrieve</span><span class="stage-arrow">→</span>
+      <span class="stage">rerank</span><span class="stage-arrow">→</span>
+      <span class="stage">compress</span><span class="stage-arrow">→</span>
+      <span class="stage">generate</span>
+    </div>
+    <div class="answer">
+      The bracket assembly spec calls for M8 mounting bolts torqued to 24–27 Nm, using a lubricated thread condition per the fastener table. Re-torque after the first thermal cycle is recommended.
+    </div>
+
+    <!-- #2 Retrieval proof panel -->
+    <div class="proof-panel">
+      <div class="proof-title">▾ RETRIEVAL PROOF — bm25 rank vs dense rank vs fused (rrf) rank</div>
+      <table>
+        <tr><th>Chunk</th><th>BM25 Rank</th><th>Dense Rank</th><th>Fused (RRF)</th><th>Reranked</th></tr>
+        <tr>
+          <td class="chunk-name">bracket_assembly_spec.pdf · p.14</td>
+          <td><span class="rank-badge top">#1</span></td>
+          <td><span class="rank-badge">#3</span></td>
+          <td><span class="fused-badge">#1</span></td>
+          <td><span class="rank-badge top">#1</span></td>
+        </tr>
+        <tr>
+          <td class="chunk-name">fastener_standards.docx · §4.2</td>
+          <td><span class="rank-badge">#4</span></td>
+          <td><span class="rank-badge top">#1</span></td>
+          <td><span class="fused-badge">#2</span></td>
+          <td><span class="rank-badge top">#2</span></td>
+        </tr>
+        <tr>
+          <td class="chunk-name">thermal_cycling_notes.md</td>
+          <td><span class="rank-badge">#2</span></td>
+          <td><span class="rank-badge">#5</span></td>
+          <td><span class="fused-badge">#3</span></td>
+          <td><span class="rank-badge">#3</span></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="inputbar">
+    <input type="text" placeholder="Ask a question about your documents...">
+    <button class="send-btn">Ask</button>
+  </div>
+
+</div>
+
+</body>
+</html>

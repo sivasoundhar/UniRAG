@@ -20,8 +20,13 @@ data/chroma_db/
 # Logs
 *.log
 
-# Streamlit local state
-.streamlit/
+# Streamlit local secrets, if this project ever adds one — NOT the whole
+# .streamlit/ directory: streamlit_app/.streamlit/config.toml is the app's
+# real dark-theme config (see UI_UPGRADE_SPEC.md) and must be committed, or
+# the deployed app silently loses its theme. secrets.toml (API keys, if
+# Streamlit's own secrets manager is ever used instead of .env) is the
+# actual local/sensitive file this rule exists to catch.
+**/.streamlit/secrets.toml
 
 # Editor/OS cruft
 .vscode/

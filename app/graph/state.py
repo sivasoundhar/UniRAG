@@ -31,13 +31,35 @@ class GraphState(TypedDict, total=False):
     conversation_id: str
     query: str
     rewritten_query: str
+    # Alternate phrasings of rewritten_query (app/query/expansion.py), used
+    # alongside it so retrieval isn't limited to one exact wording — e.g.
+    # "LLM" vs "language model" vs "chatbot". Can be empty: expand_node
+    # falls back to [] rather than failing the turn if the LLM call errors,
+    # since expansion is a recall booster, not something retrieval requires
+    # to function (rewritten_query alone is always searched too).
+    expanded_queries: list[str]
     dense_results: list[tuple[Document, float]]
     bm25_results: list[tuple[Document, float]]
     fused_results: list[tuple[Document, float]]
     reranked_results: list[tuple[Document, float]]
+    # One row per chunk in reranked_results, carrying its 1-indexed rank in
+    # each earlier stage (dense/BM25/fused) alongside its final position —
+    # built by rerank_node from lists the graph already computed, purely so
+    # the UI's retrieval-proof table (see UI_UPGRADE_SPEC.md) has something
+    # honest to render instead of asserting "hybrid retrieval happened."
+    retrieval_proof: list[dict]
     compressed_docs: list[Document]
     chat_history: list[dict[str, str]]
     answer: str
+    # Which model/provider actually produced `answer` — set by generate_node
+    # from get_completion_with_model's return, not a fixed setting value,
+    # since automatic Groq-model and Groq->Ollama fallback (app/llm/
+    # llm_gateway.py) both mean the answering model isn't predictable from
+    # config alone. Exists so "which model answered" is checkable on the
+    # record instead of assumed, the same reasoning retrieval_proof above
+    # was built on.
+    answer_model: str
+    answer_provider: str
 
 
 if __name__ == "__main__":

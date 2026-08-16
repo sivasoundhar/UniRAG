@@ -1,40 +1,30 @@
 # UniRAG
 
-A from-scratch, production-shaped Retrieval-Augmented Generation platform —
-built as a 6-day portfolio project, not a hosted product. UniRAG is designed
-as a reusable **AI Knowledge Core**: one hybrid-retrieval RAG API meant to
-sit underneath multiple future downstream copilots (an Engineering AI
-Copilot, a Medical AI Copilot — both hypothetical future consumers, not
-built yet), rather than a single-purpose chatbot.
+[![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](./LICENSE)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
+[![LangGraph](https://img.shields.io/badge/Pipeline-LangGraph-1C3C3C.svg)](https://github.com/langchain-ai/langgraph)
+
+A from-scratch, production-shaped Retrieval-Augmented Generation platform.
+UniRAG is a reusable, domain-agnostic **AI Knowledge Core**: a
+hybrid-retrieval RAG API, not a single-purpose chatbot.
 
 This project exists to be **read**, not just run. Every non-obvious design
 choice — why RRF instead of raw-score fusion, why regex guardrails instead
 of an LLM self-check, why the UI never imports the backend — has an inline
-"why this works" comment in the code, specifically so it can be explained
-out loud in an interview. This README is the map; the code and
+"why this works" comment in the code. This README is the map; the code and
 [`docs/CLAUDE.md`](./docs/CLAUDE.md) are the territory.
 
-```
-                AI Knowledge Core (UniRAG)
-                        │
-          ┌─────────────┴─────────────┐
-          ▼                           ▼
-  Engineering AI Copilot       Medical AI Copilot
-     (future, separate)         (future, separate)
-```
-
 No domain-specific logic lives in `app/` — every module is importable and
-usable standalone. A downstream copilot would call this API and add its own
-domain framing on top, not fork the core. (Architecturally sound, not yet
-built — and today there's no per-domain data isolation either; see
-[Known limitations](#known-limitations).)
+usable standalone, and the API carries no assumptions about what kind of
+documents it's indexing. (Today there's also no per-tenant data isolation;
+see [Known limitations](#known-limitations).)
 
-> **Live demo:** not yet deployed — `render.yaml` is prepared but unverified
-> against a live account (see [Deployment](#deployment)).
-> **Screenshots:** TODO before publishing — add 2-3 screenshots of the Chat
-> page (pipeline panel + retrieval-proof table). A static HTML mockup of the
-> intended look exists at `unirag_ui_v3_demo.html` as a reference in the
-> meantime.
+> **Live demo:** runs locally via Docker Compose today (see [Running
+> it](#running-it)); a Render Blueprint (`render.yaml`) is prepared for
+> one-click cloud deploy but not yet verified against a live account (see
+> [Deployment](#deployment)). A static preview of the UI's intended look is
+> in `unirag_ui_v3_demo.html`.
 
 ## Table of contents
 
@@ -49,7 +39,7 @@ built — and today there's no per-domain data isolation either; see
 - [Testing](#testing)
 - [Deployment](#deployment)
 - [Project structure](#project-structure)
-- [Build process & interview talking points](#build-process--interview-talking-points)
+- [Build process & design notes](#build-process--design-notes)
 - [Known limitations](#known-limitations)
 - [License](#license)
 - [Further reading](#further-reading)
@@ -455,7 +445,7 @@ UniRAG/
 └── docs/CLAUDE.md                   full build spec + day-by-day progress log (§12)
 ```
 
-## Build process & interview talking points
+## Build process & design notes
 
 Built solo over a 6-day plan (one module group per day) under two hard
 constraints: free/open-source tools only (Groq's free tier, no paid APIs),
@@ -483,8 +473,7 @@ A few of the more interesting things found while building it:
   installed on every dev machine.
 
 For a deeper walkthrough of any one mechanism, these modules each carry an
-inline "why this works" comment and interviewer-style questions, per this
-project's own documentation convention:
+inline "why this works" comment explaining the reasoning, not just the code:
 
 | Topic | File |
 |---|---|
@@ -501,7 +490,7 @@ reasoning), and environment notes live in `docs/CLAUDE.md` §12.
 
 - **No streaming** — `/chat` returns the full answer in one blocking response.
 - **Long-term conversation memory is in-process only** (stubbed with a `TODO` in `app/memory/conversation_memory.py`) — doesn't survive a restart.
-- **No per-domain/per-tenant data isolation** — every upload goes into one shared corpus; there's no `domain` tag on documents and retrieval doesn't filter by one. Two options are on record, neither built yet: a fully separate UniRAG deployment per downstream consumer (simplest, zero code), or wiring the already-built-but-unused `app/filtering/metadata_filter.py` into upload/retrieval so one shared instance can tag and filter by domain. Deferred until a second real consumer actually needs it, not forgotten.
+- **No per-tenant/per-domain data isolation** — every upload goes into one shared corpus; there's no `domain` tag on documents and retrieval doesn't filter by one. `app/filtering/metadata_filter.py` is already built for this (tag documents at upload, filter at retrieval) but not yet wired into the pipeline — deferred until a real use case needs it, not forgotten.
 - **Render deployment is unverified** — `render.yaml` is prepared but has not been deployed against a live account; `unirag-ui`'s `API_BASE_URL` wiring in particular is flagged as needing a manual check after first deploy.
 - **BM25 is rebuilt from the full corpus on each process start / after every upload**, not incrementally maintained — fine at this project's scale, would need revisiting for a larger corpus or multi-process deployment.
 - **Local Chroma's persistent store isn't safe under concurrent multi-process access** — a real corpus-consistency incident during development was traced to multiple live processes holding simultaneous connections to the same persist directory; if corpus data looks inconsistent, check for stray duplicate processes before assuming a code bug.
@@ -513,5 +502,5 @@ MIT — see [`LICENSE`](./LICENSE).
 ## Further reading
 
 - `docs/CLAUDE.md` — the original build spec, hard constraints, and the full day-by-day progress log (§12) this README's "Build process" section summarizes.
-- `PROJECT_SUMMARY.md` — a fuller narrative version of the same build history, written for a portfolio audience.
+- `PROJECT_SUMMARY.md` — a fast-recall version of the same build history: tech stack, architecture, status, and known limitations at a glance.
 - `UI_UPGRADE_SPEC.md` — the UI's visual design rationale (dark "technical/lab" aesthetic, palette, why custom CSS was chosen over a framework migration).

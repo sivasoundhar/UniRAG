@@ -16,6 +16,13 @@ from langchain_core.documents import Document
 from app.config.settings import settings
 from app.embeddings.bge_embedder import BGEEmbedder
 
+# Shared by every read path that should skip "temporarily deleted" chunks
+# (similarity_search, get_all_documents's default). $ne True/False rather
+# than $eq True: verified empirically that Chroma's $ne matches a document
+# missing the field entirely, so this stays correct for chunks indexed
+# before the "active" key existed, without a data migration.
+_ACTIVE_FILTER = {"active": {"$ne": False}}
+
 
 class VectorStore:
     """
@@ -57,6 +64,12 @@ class VectorStore:
         for doc, chunk_id in zip(documents, ids):
             metadata = dict(doc.metadata)
             metadata["chunk_id"] = chunk_id
+            # Explicit rather than relying on the key's absence to mean
+            # "active" — set_active_by_source below toggles this same key
+            # to False for a soft ("temporary") delete, so every chunk
+            # should carry it from the start rather than only the ones
+            # that have ever been hidden.
+            metadata["active"] = True
             metadatas.append(metadata)
 
         embeddings = self._embedder.embed_documents(texts)
@@ -90,6 +103,11 @@ class VectorStore:
         results = self._collection.query(
             query_embeddings=[query_embedding],
             n_results=min(k, self._collection.count()),
+            # $ne (not $eq True) so chunks indexed before the "active" flag
+            # existed — which have no "active" key at all — still count as
+            # active instead of silently vanishing from retrieval; only an
+            # explicit active=False (a "temporary" delete) is excluded.
+            where=_ACTIVE_FILTER,
         )
 
         pairs: list[tuple[Document, float]] = []
@@ -100,22 +118,76 @@ class VectorStore:
             pairs.append((Document(page_content=text, metadata=metadata), score))
         return pairs
 
-    def get_all_documents(self) -> list[Document]:
+    def delete_by_source(self, source: str) -> int:
         """
-        Takes: nothing.
-        Returns: every chunk currently in the collection, as Documents with
-        their chunk_id intact in metadata.
+        Takes: the exact metadata["source"] value to remove — the original
+        filename set at upload time (see app/main.py's upload route).
+        Returns: how many chunks were deleted (0 if nothing matched).
+        Use this: to remove a document from the corpus by name, without the
+        caller needing to know individual chunk_ids — e.g. from a DELETE
+        API route cleaning up an unwanted upload.
+
+        Fetches matching ids first (include=[] — ids come back regardless,
+        so there's no need to also pull documents/embeddings/metadatas just
+        to count them) rather than trusting collection.delete()'s return
+        value, because Chroma's delete doesn't report how many rows matched.
+        """
+        matches = self._collection.get(where={"source": source}, include=[])
+        ids = matches["ids"]
+        if not ids:
+            return 0
+        self._collection.delete(ids=ids)
+        return len(ids)
+
+    def get_all_documents(self, include_inactive: bool = False) -> list[Document]:
+        """
+        Takes: include_inactive — pass True to also return chunks that were
+        "temporarily deleted" (set_active_by_source(..., False)).
+        Returns: every active chunk currently in the collection by default,
+        as Documents with their chunk_id intact in metadata.
         Use this: to build the BM25 index over the exact same corpus Chroma
-        holds, instead of maintaining a second copy of the documents.
+        holds, instead of maintaining a second copy of the documents — the
+        default (active only) keeps a hidden document out of BM25 too, not
+        just dense search. Pass include_inactive=True only for something
+        that needs to see hidden documents, e.g. listing them to restore.
         """
         if self._collection.count() == 0:
             return []
 
-        results = self._collection.get(include=["documents", "metadatas"])
+        where = None if include_inactive else _ACTIVE_FILTER
+        results = self._collection.get(where=where, include=["documents", "metadatas"])
         return [
             Document(page_content=text, metadata=metadata)
             for text, metadata in zip(results["documents"], results["metadatas"])
         ]
+
+    def set_active_by_source(self, source: str, active: bool) -> int:
+        """
+        Takes: the exact metadata["source"] value, and the active state to
+        set it to (False = "temporary delete" — hidden from retrieval but
+        embeddings kept, so restoring is instant with no re-upload/re-embed;
+        True = restore).
+        Returns: how many chunks were updated (0 if nothing matched).
+        Use this: for the "temporary delete" / restore half of document
+        management — delete_by_source is the "permanent" half.
+
+        Matches by source with no active-state filter (unlike the read
+        paths above) — restoring a hidden document has to be able to find
+        it precisely because it's hidden, and re-hiding an already-hidden
+        one should be a harmless no-op, not a "not found."
+
+        collection.update() merges the given metadata keys into each
+        existing dict rather than replacing it wholesale (verified against
+        Chroma directly before relying on it here) — so this can pass just
+        {"active": active} without first fetching and re-sending source/
+        chunk_id/every other metadata key, and without risking wiping them.
+        """
+        matches = self._collection.get(where={"source": source}, include=[])
+        ids = matches["ids"]
+        if not ids:
+            return 0
+        self._collection.update(ids=ids, metadatas=[{"active": active}] * len(ids))
+        return len(ids)
 
 
 if __name__ == "__main__":
@@ -135,3 +207,34 @@ if __name__ == "__main__":
     print(f"Top {len(results)} result(s) for {query!r}:")
     for doc, score in results:
         print(f"  score={score:.4f} source={doc.metadata['source']!r} text={doc.page_content!r}")
+
+    # Temporary delete: hide ocr.txt, confirm it drops out of both dense
+    # search and the default (active-only) get_all_documents, but is still
+    # in the collection (include_inactive=True) and comes back on restore.
+    hidden = store.set_active_by_source("ocr.txt", active=False)
+    active_sources = {doc.metadata["source"] for doc in store.get_all_documents()}
+    all_sources = {doc.metadata["source"] for doc in store.get_all_documents(include_inactive=True)}
+    dense_sources = {doc.metadata["source"] for doc, _ in store.similarity_search("OCR engine", k=5)}
+    print(f"\nHid {hidden} chunk(s) with source='ocr.txt'")
+    assert hidden == 1 and "ocr.txt" not in active_sources and "ocr.txt" not in dense_sources
+    assert "ocr.txt" in all_sources  # still there, just not active
+    print("OK: temporary delete hides from get_all_documents and similarity_search, but keeps the embedding.")
+
+    restored = store.set_active_by_source("ocr.txt", active=True)
+    active_sources = {doc.metadata["source"] for doc in store.get_all_documents()}
+    assert restored == 1 and "ocr.txt" in active_sources
+    print("OK: restore (set_active_by_source(..., True)) brings it back with no re-embedding needed.")
+
+    # Delete one of the just-added docs by source and confirm it's really gone.
+    deleted = store.delete_by_source("rrf.txt")
+    remaining_sources = {doc.metadata["source"] for doc in store.get_all_documents()}
+    print(f"\nDeleted {deleted} chunk(s) with source='rrf.txt'")
+    print(f"Remaining sources: {sorted(remaining_sources)}")
+    assert deleted == 1 and "rrf.txt" not in remaining_sources
+    print("OK: delete_by_source (permanent) removed exactly the targeted document's chunks.")
+
+    # Clean up the rest of this self-test's own data so re-running it (or
+    # the real app) doesn't accumulate rrf.txt/ocr.txt/chroma.txt/rerank.txt
+    # duplicates in the persistent collection on every run.
+    for source in ("ocr.txt", "chroma.txt", "rerank.txt"):
+        store.delete_by_source(source)
