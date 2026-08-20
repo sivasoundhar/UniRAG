@@ -5,29 +5,34 @@
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
 [![LangGraph](https://img.shields.io/badge/Pipeline-LangGraph-1C3C3C.svg)](https://github.com/langchain-ai/langgraph)
 
-A from-scratch, production-shaped Retrieval-Augmented Generation platform.
-UniRAG is a reusable, domain-agnostic **AI Knowledge Core**: a
-hybrid-retrieval RAG API, not a single-purpose chatbot.
+**UniRAG is a self-hosted RAG API you point at your own documents and query
+over HTTP.** Upload PDFs, Word docs, text files, or scanned images; ask
+questions; get answers grounded in what you uploaded, with every retrieved
+chunk's ranking shown alongside the answer so the retrieval isn't a black
+box. No vendor lock-in, no managed service, no per-query billing beyond
+whatever LLM API you point it at (a free Groq tier works out of the box).
 
-This project exists to be **read**, not just run. Every non-obvious design
-choice — why RRF instead of raw-score fusion, why regex guardrails instead
-of an LLM self-check, why the UI never imports the backend — has an inline
-"why this works" comment in the code. This README is the map; the code is
-the territory.
+It's built as a reusable **AI Knowledge Core**, not a single-purpose
+chatbot: nothing in `app/` assumes what kind of documents it's indexing, so
+the same API works as the retrieval backend for a support bot, an internal
+docs search, a research assistant, or anything else that needs "answer
+questions from a corpus" as a building block. A thin Streamlit UI
+(`streamlit_app/`) is included for trying it out, but it's optional — the
+API is the actual product, and it's a plain HTTP client of it, replaceable
+without touching the core.
 
-No domain-specific logic lives in `app/` — every module is importable and
-usable standalone, and the API carries no assumptions about what kind of
-documents it's indexing. (Today there's also no per-tenant data isolation;
-see [Known limitations](#known-limitations).)
+Every non-obvious design choice — why RRF instead of raw-score fusion, why
+regex guardrails instead of an LLM self-check, why the UI never imports the
+backend — has an inline "why this works" comment in the code, and is also
+summarized in [Key design decisions](#key-design-decisions) below.
 
-> **Live demo:** runs locally via Docker Compose today (see [Running
-> it](#running-it)); a Render Blueprint (`render.yaml`) is prepared for
-> one-click cloud deploy but not yet verified against a live account (see
-> [Deployment](#deployment)). A static preview of the UI's intended look is
-> in `unirag_ui_v3_demo.html`.
+> **Status:** runs locally via Docker Compose today (see [Quickstart](#quickstart));
+> a Render Blueprint (`render.yaml`) is prepared for one-click cloud deploy
+> but not yet verified against a live account (see [Deployment](#deployment)).
 
 ## Table of contents
 
+- [Quickstart](#quickstart)
 - [Features](#features)
 - [Architecture](#architecture)
 - [How it works](#how-it-works)
@@ -41,6 +46,45 @@ see [Known limitations](#known-limitations).)
 - [Project structure](#project-structure)
 - [Known limitations](#known-limitations)
 - [License](#license)
+
+## Quickstart
+
+Needs [Docker](https://docs.docker.com/get-docker/) and a free
+[Groq API key](https://console.groq.com/keys) (or skip the key and run
+against a local [Ollama](https://ollama.com/) instead — see
+[Environment](#environment)).
+
+```bash
+git clone https://github.com/sivasoundhar/UniRAG.git
+cd UniRAG
+cp .env.example .env
+# edit .env, set GROQ_API_KEY=<your key>
+
+docker compose up --build
+# API:       http://localhost:8000/api/v1/health
+# Streamlit: http://localhost:8501
+```
+
+Open `http://localhost:8501` for the UI — a 3-document sample corpus is
+pre-loaded, so Chat and Search work immediately with nothing to upload
+first. Or drive the API directly:
+
+```bash
+# Upload a document
+curl -F "file=@yourdoc.pdf" "http://localhost:8000/api/v1/upload"
+
+# Ask a question — grounded in whatever's indexed (sample corpus + your upload)
+curl -X POST "http://localhost:8000/api/v1/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is reciprocal rank fusion?"}'
+
+# Retrieval only, no LLM call — inspect what would be retrieved
+curl -X POST "http://localhost:8000/api/v1/search" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "hybrid retrieval", "k": 3}'
+```
+
+Full endpoint list and response shapes: [API reference](#api-reference).
 
 ## Features
 
