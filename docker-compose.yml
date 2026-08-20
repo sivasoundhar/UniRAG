@@ -7,31 +7,30 @@ services:
       - "8000:8000"
     env_file:
       - .env
-    environment:
-      # Overrides for networks where HTTPS to huggingface.co and
-      # api.groq.com is blocked (e.g. antivirus HTTPS scanning intercepting
-      # TLS — see app/config/settings.py): HF models load from the mounted
-      # cache instead of downloading, and the LLM provider defaults to the
-      # host's Ollama instead of Groq.
-      # None of this is needed on a machine with normal network access —
-      # there, .env's LLM_PROVIDER=groq is what actually runs.
-      - HF_HUB_OFFLINE=1
-      - TRANSFORMERS_OFFLINE=1
-      - LLM_PROVIDER=ollama
-      - OLLAMA_HOST=http://host.docker.internal:11434
     volumes:
       # Uploaded files and the persistent Chroma index survive a container
       # restart/rebuild, and stay visible/inspectable from the host.
       - ./data:/app/data
-      # Reuses this machine's already-downloaded BGE/cross-encoder models
-      # instead of re-downloading them inside the container (Windows path —
-      # a Linux/Mac dev machine would use ~/.cache/huggingface instead).
-      - ${USERPROFILE}/.cache/huggingface:/root/.cache/huggingface
-    extra_hosts:
-      # host.docker.internal resolves out of the box on Docker Desktop
-      # (Windows/Mac) but not on native Linux hosts — this makes the
-      # OLLAMA_HOST override above work regardless of host OS.
-      - "host.docker.internal:host-gateway"
+    # --- Optional: local-network workaround -----------------------------
+    # Uncomment this block only if your network blocks HTTPS to
+    # huggingface.co/api.groq.com (e.g. antivirus HTTPS scanning
+    # intercepting TLS — see app/config/settings.py). It forces Ollama
+    # instead of Groq and loads HF models from your host's cache instead
+    # of downloading them, so it needs a local Ollama server and an
+    # already-populated Hugging Face cache to work. Not needed — and will
+    # break a fresh clone with no cache yet — on a machine with normal
+    # network access, where .env's LLM_PROVIDER=groq is what should run.
+    #
+    # environment:
+    #   - HF_HUB_OFFLINE=1
+    #   - TRANSFORMERS_OFFLINE=1
+    #   - LLM_PROVIDER=ollama
+    #   - OLLAMA_HOST=http://host.docker.internal:11434
+    # volumes:
+    #   - ${USERPROFILE}/.cache/huggingface:/root/.cache/huggingface  # Windows
+    #   # - ~/.cache/huggingface:/root/.cache/huggingface             # Linux/Mac
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
 
   # UniRAG UI — thin Streamlit client, talks to `app` only over
   # HTTP via API_BASE_URL. No shared volumes/env with `app` beyond that URL:
