@@ -26,9 +26,10 @@ regex guardrails instead of an LLM self-check, why the UI never imports the
 backend — has an inline "why this works" comment in the code, and is also
 summarized in [Key design decisions](#key-design-decisions) below.
 
-> **Status:** runs locally via Docker Compose today (see [Quickstart](#quickstart));
-> a Render Blueprint (`render.yaml`) is prepared for one-click cloud deploy
-> but not yet verified against a live account (see [Deployment](#deployment)).
+> **Status:** runs locally today, with or without Docker (see
+> [Quickstart](#quickstart)); a Render Blueprint (`render.yaml`) is prepared
+> for one-click cloud deploy but not yet verified against a live account
+> (see [Deployment](#deployment)).
 
 ## Table of contents
 
@@ -49,10 +50,13 @@ summarized in [Key design decisions](#key-design-decisions) below.
 
 ## Quickstart
 
-Needs [Docker](https://docs.docker.com/get-docker/) and a free
-[Groq API key](https://console.groq.com/keys) (or skip the key and run
-against a local [Ollama](https://ollama.com/) instead — see
-[Environment](#environment)).
+Docker isn't required — it's just the fastest path, since it bundles
+Tesseract and every Python dependency for you. Pick whichever you have on
+hand; either way you'll want a free [Groq API key](https://console.groq.com/keys)
+first (or skip it and run against a local [Ollama](https://ollama.com/)
+instead — see [Environment](#environment)).
+
+**With Docker:**
 
 ```bash
 git clone https://github.com/sivasoundhar/UniRAG.git
@@ -64,6 +68,27 @@ docker compose up --build
 # API:       http://localhost:8000/api/v1/health
 # Streamlit: http://localhost:8501
 ```
+
+**Without Docker** (needs Python 3.12 and, for image/scanned-doc uploads,
+[Tesseract](https://github.com/tesseract-ocr/tesseract) installed locally):
+
+```bash
+git clone https://github.com/sivasoundhar/UniRAG.git
+cd UniRAG
+cp .env.example .env
+# edit .env, set GROQ_API_KEY=<your key>
+
+python -m venv venv && source venv/Scripts/activate   # venv/bin/activate on Linux/Mac
+pip install -r requirements.txt
+uvicorn app.main:app --reload                          # API on :8000
+
+# in a second terminal:
+cd streamlit_app && pip install -r requirements.txt
+streamlit run app.py                                   # UI on :8501
+```
+
+Full detail on both paths (ports, volumes, what each service needs):
+[Running it](#running-it).
 
 Open `http://localhost:8501` for the UI — a 3-document sample corpus is
 pre-loaded, so Chat and Search work immediately with nothing to upload
