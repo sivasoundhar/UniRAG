@@ -122,54 +122,49 @@ fast — not to look like a generic chat-with-your-docs SaaS demo.
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│ Streamlit UI  (streamlit_app/)                                       │
-│ thin HTTP client — never imports app/, talks only to the REST API    │
-└──────────────────────────────────────────────────────────────────────┘
-                                   │  HTTP (requests library)
-                                   ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│ FastAPI  (app/main.py) — every route is a plain sync `def`           │
-│ upload · documents (delete/restore) · chat · search · health · stats │
-│ (global exception handler guarantees every response is JSON)         │
-└──────────────────────────────────────────────────────────────────────┘
-                                   │  /api/v1/chat only
-                                   ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│ input_guard  (app/guardrails/) — NeMo Guardrails, regex rail only    │
-│ PII patterns + jailbreak patterns on the raw query → 400 if blocked  │
-└──────────────────────────────────────────────────────────────────────┘
-                                   ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│ LangGraph pipeline  (app/graph/build_graph.py) — 8 nodes, linear     │
-│                                                                       │
-│ rewrite → expand → retrieve → fuse → rerank → compress               │
-│                                     → generate → save_turn           │
-└──────────────────────────────────────────────────────────────────────┘
-                                   │
-             ┌─────────────────────┬─────────────┐
-             ▼                                   ▼
-┌─────────────────────────┐    ┌────────────────────────────────────┐
-│ Retrieval core          │    │ LLM gateway                        │
-│  Chroma (dense, cosine) │    │  Groq (primary + fallback)         │
-│  BM25Retriever          │    │  → Ollama (local)                  │
-│  reciprocal_rank_fusion │    │  used by rewrite/expand/generate   │
-│  cross-encoder rerank   │    │  vision model for OCR-empty images │
-└─────────────────────────┘    └────────────────────────────────────┘
-             │                                   │
-             └─────────────────────┴─────────────┘
-                                   ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│ output_guard  (app/guardrails/) — regex PII-leak check on the        │
-│ generated answer → 400 if blocked                                    │
-└──────────────────────────────────────────────────────────────────────┘
-                                   ▼
-                         back through FastAPI to the client
+```mermaid
+flowchart TD
+    UI["Streamlit UI — streamlit_app/<br/>thin HTTP client, never imports app/"]
+    API["FastAPI — app/main.py<br/>upload · documents · chat · search · health · stats<br/>sync routes · global exception handler → always JSON"]
+    IG["input_guard<br/>regex rail: PII + jailbreak patterns<br/>blocks with 400 before anything else runs"]
+    OG["output_guard<br/>regex PII-leak check on the generated answer<br/>blocks with 400"]
+
+    UI -- "HTTP (requests)" --> API
+    API -- "/api/v1/chat only" --> IG
+    IG --> PIPE
+
+    subgraph PIPE["LangGraph pipeline — app/graph/build_graph.py (8 nodes, linear)"]
+        direction LR
+        RW[rewrite] --> EX[expand] --> RET[retrieve] --> FU["fuse (RRF)"] --> RR[rerank] --> CO[compress] --> GEN[generate] --> SV[save_turn]
+    end
+
+    subgraph RETCORE["Retrieval core"]
+        direction LR
+        VS[("Chroma<br/>dense, cosine")]
+        BM["BM25Retriever"]
+        CE["cross-encoder<br/>rerank"]
+    end
+
+    subgraph LLMGW["LLM gateway"]
+        direction LR
+        GROQ["Groq<br/>primary + fallback models"] -. "every model fails" .-> OLL["Ollama<br/>local fallback"]
+        VIS["vision model<br/>OCR-empty images"]
+    end
+
+    PIPE -. "dense + BM25 search, rerank" .-> RETCORE
+    PIPE -. "rewrite / expand / generate" .-> LLMGW
+
+    SV --> OG
+    OG --> API
+    API --> UI
 ```
 
 Guardrails deliberately live **outside** the LangGraph pipeline, wired at
 the FastAPI route layer — see [Key design decisions](#key-design-decisions).
+`/api/v1/upload`, `/search`, `/health`, and `/stats` skip both guardrails
+and the LangGraph pipeline entirely — only `/chat` runs the full path shown
+above; the other routes talk to the retrieval core (or nothing at all)
+directly.
 
 ## How it works
 
