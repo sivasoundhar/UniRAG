@@ -5,6 +5,8 @@
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
 [![LangGraph](https://img.shields.io/badge/Pipeline-LangGraph-1C3C3C.svg)](https://github.com/langchain-ai/langgraph)
 
+![UniRAG demo — asking a question and getting a grounded answer with a BM25/dense/RRF/rerank retrieval-proof table](./docs/assets/unirag-demo.gif)
+
 **UniRAG is a self-hosted RAG API you point at your own documents and query
 over HTTP.** Upload PDFs, Word docs, text files, or scanned images; ask
 questions; get answers grounded in what you uploaded, with every retrieved
