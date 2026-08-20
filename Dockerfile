@@ -14,10 +14,11 @@ WORKDIR /app
 # re-runs pip install when requirements.txt actually changes, not on every
 # code edit.
 COPY requirements.txt .
-# --trusted-host: this dev network's TLS-inspecting proxy breaks certificate
-# verification for pypi.org from inside Docker's network path specifically
-# (the host's own pip installs were unaffected — see CLAUDE.md §12 for the
-# same pattern hitting huggingface.co/api.groq.com directly on the host).
+# --trusted-host: some networks' TLS-inspecting proxies (e.g. antivirus
+# HTTPS scanning) break certificate verification for pypi.org from inside
+# Docker's network path specifically, even when host-side pip installs are
+# unaffected — the same class of issue can hit huggingface.co/api.groq.com
+# directly on the host too.
 # Scoped to these two package-index hosts, build time only — does not
 # affect the app's own runtime HTTPS calls (Groq/Ollama) at all.
 RUN pip install --no-cache-dir \

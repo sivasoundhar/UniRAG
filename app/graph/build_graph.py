@@ -44,7 +44,7 @@ nothing here needs to be decided conditionally yet — every turn runs every
 step in the same order. LangGraph earns its keep once a step becomes
 conditional (e.g. "skip retrieval for a pure follow-up question" or "route
 to a different generation prompt for a summarization request") — that's a
-natural extension point past Day 4, not something today's finish line
+natural future extension point, not something the current scope
 ("one multi-turn conversation works end-to-end, memory carries context")
 needs. Building branching logic before there's a real branching decision to
 make would be solving a problem this app doesn't have yet.
@@ -114,11 +114,11 @@ def run_turn(graph, conversation_id: str, query: str) -> GraphState:
     the user's query.
     Returns: the final GraphState for this turn — same as calling
     graph.invoke() directly.
-    Use this: instead of calling graph.invoke() directly, whenever the
-    Day 5 finish line's per-request logging (latency, retrieval count,
-    sources) needs to actually happen — this is the one seam every request
-    passes through, so it's the right place to time and log, rather than
-    threading logging calls into individual nodes.
+    Use this: instead of calling graph.invoke() directly, whenever
+    per-request logging (latency, retrieval count, sources) needs to
+    actually happen — this is the one seam every request passes through,
+    so it's the right place to time and log, rather than threading logging
+    calls into individual nodes.
     """
     start = time.perf_counter()
     result = graph.invoke({"conversation_id": conversation_id, "query": query})
@@ -135,8 +135,8 @@ def run_turn(graph, conversation_id: str, query: str) -> GraphState:
 
 
 if __name__ == "__main__":
-    # Day 4 finish line: seed a couple of documents about RRF into the
-    # vector store, then run two turns of one conversation. Turn 2 uses
+    # Self-test: seed a couple of documents about RRF into the vector
+    # store, then run two turns of one conversation. Turn 2 uses
     # "it" to refer to turn 1's topic — if memory carries context, rewrite
     # should resolve "it" into something retrieval can actually search for,
     # and the answer should stay coherent with turn 1.

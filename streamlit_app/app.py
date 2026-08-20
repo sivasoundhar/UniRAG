@@ -8,21 +8,18 @@ why it's a separate deployable unit with its own requirements.txt/Dockerfile
 (see docker-compose.yml) rather than living inside the app/ package.
 
 Deliberately domain-neutral (no "medical", no product branding) — UniRAG is
-the reusable core; a downstream copilot (per CLAUDE.md's architecture) would
-skin this or build its own UI on top of the same API, not the other way
-around.
+the reusable core; a downstream product would skin this or build its own UI
+on top of the same API, not the other way around.
 
-Visual design follows UI_UPGRADE_SPEC.md's second revision (the v3 mockup,
-built to match a specific reference screenshot the user supplied). That's a
-deliberate, discussed deviation from the spec's first revision, which kept
-custom HTML to the header/pipeline-pills/meta-row only and used native
-st.container/st.dataframe for everything else: matching the mockup's icon
-pipeline diagram and badge-highlighted retrieval-proof table isn't
-achievable with those native components, so this file uses custom HTML/CSS
-for those two pieces specifically. Sidebar navigation, inputs, and buttons
-stay native Streamlit widgets — restyled by palette/theme, not by fighting
-Streamlit's internal DOM, since that structure isn't a stable target across
-versions.
+Visual design matches a specific reference mockup (`unirag_ui_v3_demo.html`)
+pixel-for-pixel: a dark "technical/lab" aesthetic, not a generic SaaS
+chatbot look. Two pieces — the "How this works" pipeline diagram and the
+per-answer retrieval-proof table — use custom HTML/CSS instead of native
+Streamlit components, because the mockup's icon pipeline diagram and
+badge-highlighted table aren't achievable with st.container/st.dataframe.
+Sidebar navigation, inputs, and buttons stay native Streamlit widgets —
+restyled by palette/theme, not by fighting Streamlit's internal DOM, since
+that structure isn't a stable target across versions.
 """
 
 import html
@@ -312,12 +309,12 @@ with st.sidebar:
     if len(corpus_sources) > 8:
         st.caption(f"+ {len(corpus_sources) - 8} more")
 
-    # Live document/chunk counts are real info the reference doesn't show
-    # in its default sidebar view — tucked into a collapsed section instead
-    # of deleted outright, so it's still one click away without competing
-    # with the clean nav+corpus look. The domain toggle (spec's original
-    # #5) is gone entirely, not just collapsed — removed on direct request,
-    # a deliberate deviation from UI_UPGRADE_SPEC.md's "don't remove it".
+    # Live document/chunk counts are real info the reference mockup doesn't
+    # show in its default sidebar view — tucked into a collapsed section
+    # instead of deleted outright, so it's still one click away without
+    # competing with the clean nav+corpus look. There used to be a "Domain"
+    # toggle here too; it was removed entirely (not just collapsed) since
+    # it was visual-only and didn't actually filter retrieval.
     if corpus_stats:
         with st.expander("⚙️ Corpus stats", expanded=False):
             stat_col1, stat_col2 = st.columns(2)
@@ -360,10 +357,9 @@ def render_pipeline_explainer() -> None:
     Always-visible panel above the chat: what actually happens to a query
     before an answer comes back — icon-and-arrow diagram, matching the
     reference mockup. Custom HTML (not st.container/st.columns) because the
-    connected-icon-box layout isn't achievable with native components; see
-    this file's module docstring for why that's a deliberate deviation from
-    UI_UPGRADE_SPEC.md's first revision. Purpose stays the same: a stranger
-    understands in ~3 seconds that this isn't a plain LLM wrapper.
+    connected-icon-box layout isn't achievable with native components (see
+    this file's module docstring). Purpose: a stranger understands in ~3
+    seconds that this isn't a plain LLM wrapper.
     """
     steps_html = ""
     for i, (icon, label, caption) in enumerate(HOW_IT_WORKS_STEPS):

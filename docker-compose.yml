@@ -8,10 +8,11 @@ services:
     env_file:
       - .env
     environment:
-      # Overrides for this dev machine's known network block (HTTPS to
-      # huggingface.co and api.groq.com both fail here — see CLAUDE.md §12):
-      # HF models load from the mounted cache instead of downloading, and
-      # the LLM provider defaults to the host's Ollama instead of Groq.
+      # Overrides for networks where HTTPS to huggingface.co and
+      # api.groq.com is blocked (e.g. antivirus HTTPS scanning intercepting
+      # TLS — see app/config/settings.py): HF models load from the mounted
+      # cache instead of downloading, and the LLM provider defaults to the
+      # host's Ollama instead of Groq.
       # None of this is needed on a machine with normal network access —
       # there, .env's LLM_PROVIDER=groq is what actually runs.
       - HF_HUB_OFFLINE=1
@@ -32,7 +33,7 @@ services:
       # OLLAMA_HOST override above work regardless of host OS.
       - "host.docker.internal:host-gateway"
 
-  # UniRAG UI (Day 7) — thin Streamlit client, talks to `app` only over
+  # UniRAG UI — thin Streamlit client, talks to `app` only over
   # HTTP via API_BASE_URL. No shared volumes/env with `app` beyond that URL:
   # see streamlit_app/app.py's docstring for why it stays a separate,
   # much smaller image with no ML dependencies of its own.

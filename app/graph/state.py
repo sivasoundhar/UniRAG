@@ -45,8 +45,8 @@ class GraphState(TypedDict, total=False):
     # One row per chunk in reranked_results, carrying its 1-indexed rank in
     # each earlier stage (dense/BM25/fused) alongside its final position —
     # built by rerank_node from lists the graph already computed, purely so
-    # the UI's retrieval-proof table (see UI_UPGRADE_SPEC.md) has something
-    # honest to render instead of asserting "hybrid retrieval happened."
+    # the UI's retrieval-proof table has something honest to render instead
+    # of just asserting "hybrid retrieval happened."
     retrieval_proof: list[dict]
     compressed_docs: list[Document]
     chat_history: list[dict[str, str]]

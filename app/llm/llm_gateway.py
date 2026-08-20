@@ -3,13 +3,12 @@ Single entry point for calling an LLM to get a text completion, and (new)
 for asking a vision-capable model to describe an image.
 
 This is deliberately minimal — just enough for the query-rewrite and
-query-expansion modules (Day 3) to have a real model to call, ahead of its
-nominal Day 6 slot in the build plan. Everything downstream (chat, RAG
-answer generation, and now image understanding) extends this file, not
-replaces it.
+query-expansion modules to have a real model to call. Everything
+downstream (chat, RAG answer generation, and now image understanding)
+extends this file, not replaces it.
 
-Manual provider *selection*, not an abstraction library: CLAUDE.md rules
-out LiteLLM, so which provider a fresh request starts on is still a plain
+Manual provider *selection*, not an abstraction library: no LiteLLM or
+similar dependency, so which provider a fresh request starts on is still a plain
 if/else on settings.llm_provider. What's automatic is the fallback once a
 request is underway: settings.llm_provider="groq" tries Groq (with its own
 model-level retry, see _call_groq) and only drops to Ollama if every Groq
@@ -93,8 +92,8 @@ def _call_groq(messages: list[dict], models_to_try: list[str], **extra_params) -
             # fault) — a different model in the list has a real chance of
             # succeeding, so retry. Deliberately NOT catching the broader
             # GroqError here: its other subclass, APIConnectionError, means
-            # no response came back at all (e.g. this network's documented
-            # TLS block, CLAUDE.md §12) — that fails identically for every
+            # no response came back at all (e.g. a network-level TLS
+            # interception issue) — that fails identically for every
             # model since the fault is the connection, not the model, so it
             # propagates immediately instead of burning time on more
             # doomed attempts.
@@ -138,8 +137,8 @@ def _complete(messages: list[dict]) -> Completion:
 
     Once a key IS set, though, a genuine Groq-side failure — every one of
     _call_groq's models rejected the request, or the connection itself is
-    down (this dev network's documented TLS block, CLAUDE.md §12, in
-    practice) — falls back to Ollama automatically instead of raising.
+    down (a network-level TLS interception issue, in practice) — falls
+    back to Ollama automatically instead of raising.
     Unlike the missing-key case, this isn't a config typo to fix once; it's
     proven to be a condition that persists for a whole session and recurs
     across many, which previously meant a human manually restarting the

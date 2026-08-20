@@ -14,7 +14,7 @@ is exactly its strength: one forward pass per (query, passage) pair means
 it cannot run over an entire corpus, only over the small top-k that
 retrieval + RRF has already narrowed things down to.
 
-Two questions an interviewer would ask:
+Two natural follow-up questions:
 1. "Why not just use the cross-encoder for retrieval directly, and skip
    the embedding step?" — because it doesn't scale: reranking 5 or 10
    candidates costs 5-10 forward passes, but scoring a whole corpus this

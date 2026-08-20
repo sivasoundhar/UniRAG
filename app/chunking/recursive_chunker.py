@@ -41,16 +41,15 @@ if __name__ == "__main__":
     # to force at least one split.
     sample_text = (
         "UniRAG is a reusable AI knowledge core built as the retrieval "
-        "backbone for two downstream copilots. It combines dense and "
+        "backbone for downstream copilots. It combines dense and "
         "sparse retrieval fused with RRF, then reranks with a cross-encoder. "
         "Query rewriting and expansion improve recall before retrieval even "
-        "runs. Guardrails and evaluation scaffolding round out the pipeline, "
-        "and everything is designed to be explained clearly in an interview. "
+        "runs. Guardrails and evaluation scaffolding round out the pipeline. "
         "Each module is meant to be readable top to bottom in one sitting, "
         "with heavy inline comments explaining why a default was chosen, "
         "not what the code obviously already says. Chunk size, overlap, "
-        "and every other tunable live in one settings file so an "
-        "interviewer's question about a magic number has a one-line answer."
+        "and every other tunable live in one settings file, so a question "
+        "about any magic number has a one-line answer."
     )
     sample_doc = Document(page_content=sample_text, metadata={"source": "demo.txt"})
 

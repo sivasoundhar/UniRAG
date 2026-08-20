@@ -37,6 +37,8 @@ data/chroma_db/
 .claude/
 
 # Local-only build/dev-process notes — kept on disk for reference, not
-# published: internal day-by-day build log and fast-recall summary.
+# published: internal day-by-day build log, fast-recall summary, and the
+# UI's iterative design-conversation spec.
 docs/CLAUDE.md
 PROJECT_SUMMARY.md
+UI_UPGRADE_SPEC.md

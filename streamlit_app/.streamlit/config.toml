@@ -1,9 +1,9 @@
-# Sets UniRAG's default look to the dark "technical/lab" aesthetic from
-# UI_UPGRADE_SPEC.md — a real Streamlit theme, not a CSS override fighting
-# the framework's own chrome (sidebar, buttons, inputs all pick this up for
-# free). Colors match app.py's --bg/--panel/--text/--accent palette exactly,
-# so the custom-CSS elements (header, pipeline pills, meta-row) sit on a
-# background that was actually designed for them instead of an arbitrary one.
+# Sets UniRAG's default look to a dark "technical/lab" aesthetic — a real
+# Streamlit theme, not a CSS override fighting the framework's own chrome
+# (sidebar, buttons, inputs all pick this up for free). Colors match
+# app.py's --bg/--panel/--text/--accent palette exactly, so the custom-CSS
+# elements (header, pipeline pills, meta-row) sit on a background that was
+# actually designed for them instead of an arbitrary one.
 [theme]
 base = "dark"
 backgroundColor = "#0D1117"

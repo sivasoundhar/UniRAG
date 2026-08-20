@@ -64,7 +64,7 @@ def load_file(file_path: str) -> list[Document]:
 
 if __name__ == "__main__":
     # Tiny self-test: create a throwaway .txt file and load it back.
-    # PDF/image loading gets exercised in the Day 1 finish-line test once
+    # PDF/image loading gets exercised in the pytest suite instead, once
     # sample files exist under data/uploads/.
     import tempfile
 

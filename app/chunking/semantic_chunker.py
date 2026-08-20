@@ -11,7 +11,7 @@ a spec that jumps from "auth" to "billing" inside one paragraph).
 
 Note on the embedding call below: this module loads its own
 SentenceTransformer instance rather than importing app/embeddings/bge_embedder.py.
-That module is a Day 2 deliverable — it wraps the same model for indexing
+That module wraps the same model for indexing
 into Chroma. Splitting sentences to find breakpoints and embedding chunks
 for retrieval are different call sites with different lifecycles (this one
 runs once at ingest time on raw sentences, that one runs on finished

@@ -34,7 +34,7 @@ confirming the same answer). Where fusion visibly earns its keep here is the
 differently, based on different evidence, and RRF produces a third ordering
 that reflects both rather than picking one retriever to trust blindly.
 
-Two questions an interviewer would ask:
+Two natural follow-up questions:
 1. "Why not just average the normalised scores instead?" — because
    normalising (e.g. min-max per query) makes the fused score sensitive to
    the score *distribution* of that one query's result set, not just
@@ -85,7 +85,7 @@ def reciprocal_rank_fusion(
 
 
 if __name__ == "__main__":
-    # Day 2 finish-line demo: one document contains the literal ID from the
+    # Self-test demo: one document contains the literal ID from the
     # query (the true answer); four more are near-verbatim echoes of the
     # query itself with the ID removed — maximum semantic similarity, zero
     # keyword overlap. Both retrievers correctly agree on the #1 result

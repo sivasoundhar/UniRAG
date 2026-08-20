@@ -1,8 +1,7 @@
 """
-FastAPI entrypoint — CLAUDE.md's four-endpoint API surface (§7), plus one
-small addition (GET /api/v1/stats, see its docstring) added for the Day 7
-Streamlit UI — wiring together every module built Day 1-5 into one running
-service.
+FastAPI entrypoint — the core four-endpoint API surface (upload/chat/search/
+health), plus one small addition (GET /api/v1/stats, see its docstring) for
+the Streamlit UI — wiring together every module into one running service.
 
 Every route is a plain `def`, not `async def`. This isn't just a style
 choice: FastAPI runs sync route handlers in a threadpool automatically, and
@@ -15,10 +14,10 @@ RuntimeError; a plain `def` route runs in a worker thread instead, where
 asyncio.run() works exactly as it does in every module's own self-test.
 
 Guardrails are wired in here, not inside app/graph/build_graph.py — that
-module's nodes/edges are unchanged from Day 4. This is the layer that
-decides what "reject this request" actually means over HTTP (400 with a
-reason), so it's the natural place for the check_input/check_output calls
-to live, per the plan logged in CLAUDE.md §12 after Day 5.
+module's nodes/edges stay focused on the retrieval pipeline itself. This is
+the layer that decides what "reject this request" actually means over HTTP
+(400 with a reason), so it's the natural place for the check_input/
+check_output calls to live.
 """
 
 import shutil
@@ -91,7 +90,7 @@ def _invalidate_bm25_retriever() -> None:
     _bm25_retriever = None
 
 
-# --- Pre-loaded sample corpus (UI_UPGRADE_SPEC.md #3) -----------------------
+# --- Pre-loaded sample corpus ------------------------------------------------
 # UniRAG explaining its own retrieval pipeline — a stranger opening the demo
 # link can ask "what is RRF?" or "how does reranking work?" and get a real,
 # grounded answer immediately, without first finding a document to upload.
@@ -152,9 +151,9 @@ def _seed_sample_corpus() -> None:
     aren't already there.
     Use this: once, at process startup (see _lifespan below) — not per
     request. Idempotent by source filename rather than a row count, because
-    CHROMA_PERSIST_DIR survives process restarts (Day 6); without that
-    check, every restart would add three more duplicate chunks to an index
-    that never resets itself.
+    CHROMA_PERSIST_DIR survives process restarts; without that check, every
+    restart would add three more duplicate chunks to an index that never
+    resets itself.
     """
     store = _get_vector_store()
     # include_inactive=True: a sample doc someone temporarily-deleted should
@@ -187,9 +186,8 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     """
     Takes: the request and any exception that reached here — meaning every
     route handler and the whole graph ran without anyone catching it (a
-    genuine bug or, in practice so far, this dev network's documented Groq
-    TLS block — see CLAUDE.md §12 — surfacing from deep inside rewrite_node
-    with no handler in between).
+    genuine bug, or a Groq connectivity/TLS issue surfacing from deep
+    inside rewrite_node with no handler in between).
     Returns: a 500 with a small, consistently-shaped JSON body.
     Use this: registered once, globally — not called directly.
 
@@ -217,7 +215,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
 
 # --- Request/response models ------------------------------------------------
-# Pydantic models for everything crossing the HTTP boundary, per CLAUDE.md §5.4.
+# Pydantic models for everything crossing the HTTP boundary.
 
 
 class UploadResponse(BaseModel):
@@ -248,8 +246,8 @@ class ChatResponse(BaseModel):
     retrieval_count: int
     reranked_count: int
     latency_ms: float
-    # UI_UPGRADE_SPEC.md #2's retrieval-proof table — real per-chunk ranks,
-    # not fabricated, straight from app/graph/nodes.py's rerank_node.
+    # Feeds the UI's retrieval-proof table — real per-chunk ranks, not
+    # fabricated, straight from app/graph/nodes.py's rerank_node.
     retrieval_proof: list[RetrievalProofEntry] = []
     # Straight from app/graph/nodes.py's expand_node — [] means either
     # expansion wasn't needed (rewritten_query alone was enough) or the
@@ -404,9 +402,9 @@ def delete_document(
     had no way to ask for anything else.
 
     404s on a source that matched nothing, rather than silently returning
-    chunks_deleted=0 — per CLAUDE.md's "fail loudly at the edges" rule, a
-    caller deleting a document almost certainly wants to know if the name
-    they gave didn't match anything, not read a number to find out.
+    chunks_deleted=0 — fail loudly at the edges: a caller deleting a
+    document almost certainly wants to know if the name they gave didn't
+    match anything, not read a number to find out.
     """
     store = _get_vector_store()
     affected_count = store.delete_by_source(source) if permanent else store.set_active_by_source(source, active=False)
@@ -520,14 +518,13 @@ def stats():
     Takes: nothing.
     Returns: how many distinct source documents and total chunks are
     currently indexed — real counts, not a cached/estimated figure.
-    Use this: for a UI that wants to show real corpus size (the Day 7
-    Streamlit app's stats panel) instead of a placeholder number.
+    Use this: for a UI that wants to show real corpus size (the Streamlit
+    app's stats panel) instead of a placeholder number.
     Deliberately a separate endpoint from /health rather than added to it:
     /health's whole point is staying fast and Chroma-independent (see its
     docstring); this one touches Chroma on purpose, since "how big is the
-    corpus" is exactly what it exists to answer. Not in CLAUDE.md §7's
-    original 4-endpoint list — added when building the Day 7 UI, which
-    needed real numbers to show rather than fabricated ones.
+    corpus" is exactly what it exists to answer. Added alongside the UI,
+    once something needed real numbers to show rather than fabricated ones.
     """
     store = _get_vector_store()
     documents = store.get_all_documents()  # active only — matches what's actually searchable
@@ -551,9 +548,8 @@ def stats():
 if __name__ == "__main__":
     # Tiny self-test: drive all 4 endpoints in-process with FastAPI's
     # TestClient — proves the wiring end-to-end without needing a running
-    # uvicorn server or Docker. Day 6's finish line (docker-compose up +
-    # a container round trip) still needs the real container, verified
-    # separately.
+    # uvicorn server or Docker. A real container round trip (docker-compose
+    # up) still needs to be verified separately.
     from fastapi.testclient import TestClient
 
     # Used as a context manager (not just TestClient(app)) specifically so

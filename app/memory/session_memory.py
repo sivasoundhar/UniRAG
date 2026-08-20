@@ -9,11 +9,10 @@ part of the chat transcript itself and shouldn't be replayed to the LLM as
 if it were a message. Keeping the two separate means clearing one doesn't
 accidentally clear the other.
 
-Not wired into today's graph (app/graph/build_graph.py): the Day 4 finish
-line is about conversation memory carrying context across turns. This module
-exists because the tech stack table calls out session memory as its own
-concern, and it's here ready for Day 6's API layer to use — e.g. storing a
-session's active filters between requests.
+Not wired into the graph (app/graph/build_graph.py): that pipeline is about
+conversation memory carrying context across turns. This module exists as
+its own concern, ready for the API layer to use — e.g. storing a session's
+active filters between requests.
 """
 
 _sessions: dict[str, dict[str, object]] = {}

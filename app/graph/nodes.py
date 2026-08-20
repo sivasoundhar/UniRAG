@@ -70,8 +70,8 @@ def rewrite_node(state: GraphState) -> dict:
 def expand_node(state: GraphState) -> dict:
     """
     Generate settings.query_expansion_n alternate phrasings of the
-    rewritten query (app/query/expansion.py — written Day 3, unwired until
-    now). A separate node rather than folded into retrieve_node, matching
+    rewritten query (app/query/expansion.py — written earlier, only wired
+    into the graph here). A separate node rather than folded into retrieve_node, matching
     this file's "one node per pipeline step" pattern (see its module
     docstring) and so the ASCII diagram in build_graph.py has a real box
     for it, not a hidden side effect of the retrieve step.
@@ -79,9 +79,8 @@ def expand_node(state: GraphState) -> dict:
     Best-effort, not required: falls back to no variants (retrieval still
     runs on rewritten_query alone, exactly like before this node existed)
     if the expansion LLM call itself fails, instead of failing the whole
-    turn over a recall *booster*. This matters concretely on this project's
-    dev network, which has shown intermittent Groq connectivity all session
-    (see CLAUDE.md §12) — rewrite_node's own LLM call has no such fallback
+    turn over a recall *booster*. This matters concretely whenever Groq
+    connectivity is intermittent — rewrite_node's own LLM call has no such fallback
     because retrieval has no fallback for a missing rewritten_query, but
     retrieval works fine on rewritten_query alone with zero expansions.
     """
@@ -149,7 +148,7 @@ def _build_retrieval_proof(
     Use this: to make "hybrid retrieval + RRF + reranking are real, not
     just claimed" checkable on the record instead of asserted — the
     Streamlit UI's retrieval-proof table renders this list directly under
-    each answer (see UI_UPGRADE_SPEC.md #2).
+    each answer.
     """
     dense_ranks = _rank_map(dense_results)
     bm25_ranks = _rank_map(bm25_results)
@@ -229,8 +228,8 @@ def generate_node(state: GraphState) -> dict:
 
     # The off-topic refusal is still a fixed, verbatim sentence, not
     # something the model composes freely — that's deliberate, not an
-    # oversight. Day 7's log records the actual failure this guards
-    # against: a smaller local model (llama3.2:3b via Ollama) would hedge
+    # oversight. It guards against an observed real failure: a smaller
+    # local model (llama3.2:3b via Ollama) would hedge
     # ("Context doesn't say, however...") and then answer anyway from its
     # own training data, defeating the entire point of "answers grounded
     # in your own documents." A free-form refusal reopens that exact door
@@ -240,7 +239,7 @@ def generate_node(state: GraphState) -> dict:
     # room to improvise past "no."
     #
     # Greetings/small talk are a deliberate, narrow carve-out from that
-    # same rule, added after Day 7: a plain "hi" used to get the identical
+    # same rule, added after observing a plain "hi" get the identical
     # flat refusal as a real off-topic question ("write me a function"),
     # which read as broken/robotic rather than careful. The boundary is
     # drawn as tight as the original anti-hedging guard needs it to stay:

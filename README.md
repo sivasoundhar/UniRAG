@@ -41,7 +41,6 @@ see [Known limitations](#known-limitations).)
 - [Project structure](#project-structure)
 - [Known limitations](#known-limitations)
 - [License](#license)
-- [Further reading](#further-reading)
 
 ## Features
 
@@ -466,7 +465,3 @@ inline "why this works" comment explaining the reasoning, not just the code:
 ## License
 
 MIT — see [`LICENSE`](./LICENSE).
-
-## Further reading
-
-- `UI_UPGRADE_SPEC.md` — the UI's visual design rationale (dark "technical/lab" aesthetic, palette, why custom CSS was chosen over a framework migration).

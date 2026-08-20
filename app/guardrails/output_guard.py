@@ -7,7 +7,7 @@ NeMo's built-in `regex` library rail, `check_async(..., rail_types=[OUTPUT])`
 instead of the input side. See input_guard.py's module docstring for the
 full reasoning on why deterministic regex over an LLM self-check rail.
 
-Why this works (per CLAUDE.md §6, this file is "Me"-owned): reuses
+Why this works: reuses
 input_guard.PII_PATTERNS rather than redefining an equivalent list here —
 PII has the same shape whether it shows up in a user's question or a
 model's answer, and keeping one definition means a future fix to, say, the
@@ -32,7 +32,7 @@ this design chose to avoid for the *blocking* decision. PII leakage is the
 one output risk that's actually shape-matchable with regex — that's why
 it's the one this file handles.
 
-Two questions an interviewer would ask:
+Two natural follow-up questions:
 1. "Why not also block output that fails a groundedness check?" —
    groundedness is a spectrum judgment (how much of the answer is
    supported by context), not a binary structural match; that's what

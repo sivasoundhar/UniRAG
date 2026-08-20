@@ -9,7 +9,7 @@ service. Two questions, two cheap proxies:
 
 Neither is a substitute for a real evaluation (e.g. an LLM-as-judge for
 faithfulness, or a labeled relevance dataset for precision/recall) — both
-are exactly the "smoke test" level CLAUDE.md's tech stack calls for: fast,
+are exactly the "smoke test" level this project's scope calls for: fast,
 free, and good enough to catch an obviously broken pipeline (retrieval
 returning nothing relevant, or an answer that's disconnected from its
 context) without adding a model call to every eval run.

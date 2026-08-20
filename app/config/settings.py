@@ -3,9 +3,9 @@ Central configuration for UniRAG.
 
 Every tunable that shows up more than once in the codebase (chunk sizes, k
 values, model names, paths) lives here instead of being hard-coded at the
-call site. This is what "no magic numbers" means in practice: if an
-interviewer asks "why 500 tokens per chunk?", the answer should be a comment
-on one line in this file, not archaeology across five modules.
+call site. This is what "no magic numbers" means in practice: the answer to
+"why 500 tokens per chunk?" should be a comment on one line in this file,
+not archaeology across five modules.
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     # --- LLM gateway -----------------------------------------------------
     # Groq is free-tier and fast; Ollama is the local fallback when the API
-    # is down or the key is missing. See app/llm/llm_gateway.py (Day 6).
+    # is down or the key is missing. See app/llm/llm_gateway.py.
     llm_provider: str = "groq"
     groq_api_key: str = ""
 
@@ -54,10 +54,10 @@ class Settings(BaseSettings):
     # "...-maverick-..." don't exist in the real model list at all.
     # qwen/qwen3.6-27b is the only vision-capable model this account
     # actually has access to right now — no fallback model exists to list.
-    # The dev network's TLS block (CLAUDE.md §12) turned out to be Avast's
-    # HTTPS-scanning feature intercepting the connection with its own
-    # certificate (trusted by Windows, not by Python's cert store) — not a
-    # Groq-side or code-side problem at all.
+    # Note: on Windows machines with Avast installed, its HTTPS-scanning
+    # feature can intercept the connection with its own certificate
+    # (trusted by Windows, not by Python's cert store), which looks like a
+    # network/TLS failure but isn't a Groq-side or code-side problem.
     groq_vision_model: str = "qwen/qwen3.6-27b"
     groq_vision_fallback_models: list[str] = []
 
@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     # than most sentence-pairs are."
     semantic_breakpoint_percentile: int = 95
 
-    # --- Vector store / retrieval (Day 2) -----------------------------------
+    # --- Vector store / retrieval -------------------------------------------
     chroma_collection_name: str = "unirag_chunks"
     # BGE models are trained asymmetrically: the query gets this instruction
     # prefix, indexed passages never do. Skipping it on the query side still
@@ -92,9 +92,9 @@ class Settings(BaseSettings):
     # the top handful of ranks from any single retriever roughly comparable.
     rrf_k: int = 60
 
-    # --- LLM-backed query tools (Day 3) -------------------------------------
-    # Bumped to the 70B model as primary on direct request — better answer
-    # quality is worth the extra latency. Worth knowing: this same setting
+    # --- LLM-backed query tools ----------------------------------------------
+    # Set to the 70B model as primary — better answer quality is worth the
+    # extra latency. Worth knowing: this same setting
     # (and its fallback list) drives every Groq text call in the app, not
     # just chat answers — rewrite_node and expand_node (query rewrite/
     # expansion) use it too, so they get slower and more expensive per
@@ -128,7 +128,7 @@ class Settings(BaseSettings):
     # diluting retrieval with too many near-duplicate queries.
     query_expansion_n: int = 3
 
-    # --- Rerank (Day 3) ------------------------------------------------------
+    # --- Rerank --------------------------------------------------------------
     # Small (~80MB), CPU-friendly, open, purpose-built for query-passage
     # relevance scoring — unlike the bi-encoder used for dense retrieval, a
     # cross-encoder reads the query and passage together, which is more
@@ -138,20 +138,20 @@ class Settings(BaseSettings):
     # cut retrieval's top_k down hard to just the passages worth paying for.
     rerank_top_n: int = 3
 
-    # --- Compression (Day 4) -------------------------------------------------
+    # --- Compression ----------------------------------------------------------
     # How many of each reranked chunk's sentences survive compression — enough
     # to keep the answer-bearing sentence(s) without handing the LLM the full
     # chunk text, which is most valuable once rerank_top_n chunks are already
     # each carrying some irrelevant surrounding sentences.
     compression_sentences_per_doc: int = 3
 
-    # --- Memory (Day 4) --------------------------------------------------------
+    # --- Memory ------------------------------------------------------------------
     # How many past (user, assistant) turn-pairs get fed back into rewrite and
     # generate each turn. Bounds prompt growth over a long conversation instead
     # of replaying the entire history every time.
     conversation_memory_max_turns: int = 5
 
-    # --- API (Day 6) -----------------------------------------------------------
+    # --- API -----------------------------------------------------------------------
     # Where POST /api/v1/upload writes incoming files before loading/chunking
     # them — kept out of chroma_persist_dir since one is source files, the
     # other is the derived index; gitignored, same as chroma_persist_dir.

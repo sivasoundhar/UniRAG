@@ -3,9 +3,8 @@ Per-conversation turn history, so a multi-turn chat can refer back to itself.
 
 Storage is a plain in-memory dict, keyed by conversation_id — it does not
 survive a process restart. That's a deliberate stub, not an oversight: this
-is the Day 4 finish line's memory requirement (one conversation carries
-context across turns within a single run), not the long-term/persistent
-memory the tech stack table explicitly marks as a stub-with-a-TODO.
+covers one conversation carrying context across turns within a single run,
+not long-term/persistent memory, which is explicitly a stub-with-a-TODO.
 
 TODO(long-term memory): swap the module-level dict below for a real store
 (Redis, Postgres) keyed the same way by conversation_id, once conversations

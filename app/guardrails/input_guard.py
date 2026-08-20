@@ -6,13 +6,13 @@ substitute and not raw regex bolted on outside any framework — but the
 detection itself is deterministic pattern matching (NeMo's built-in `regex`
 library rail, powered by config alone, no Colang authoring or LLM call
 needed), not an LLM "self-check" rail. That choice was made deliberately:
-this session already hit real network trouble reaching Groq (see CLAUDE.md
-§12), and a self-check rail would put a live LLM call on the critical path
-of every single request just to decide whether to allow it — regex pattern
-matching is instant, free, and fully deterministic, at the cost of only
-catching what the patterns literally describe.
+a self-check rail would put a live LLM call (with its own latency and
+availability risk) on the critical path of every single request just to
+decide whether to allow it — regex pattern matching is instant, free, and
+fully deterministic, at the cost of only catching what the patterns
+literally describe.
 
-Why this works (per CLAUDE.md §6, this file is "Me"-owned):
+Why this works:
 NeMo Guardrails' `regex` library ships a ready-made input rail
 (`regex check input`, see nemoguardrails/library/regex/flows.co) that reads
 patterns straight out of the rails config and runs a case-insensitive regex
@@ -39,7 +39,7 @@ only as good as the phrases someone thought to add to it. That tradeoff
 (zero LLM cost and latency vs. limited generalization) is exactly why this
 was the recommended, not the only, design — see the module docstring above.
 
-Two questions an interviewer would ask:
+Two natural follow-up questions:
 1. "What happens when someone phrases a jailbreak attempt in a way that
    isn't in your pattern list?" — it passes through uncaught. This is the
    direct cost of choosing determinism over an LLM self-check rail; the
