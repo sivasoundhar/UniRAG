@@ -35,3 +35,8 @@ data/chroma_db/
 
 # Claude Code local tool state — session/machine-specific, not project source.
 .claude/
+
+# Local-only build/dev-process notes — kept on disk for reference, not
+# published: internal day-by-day build log and fast-recall summary.
+docs/CLAUDE.md
+PROJECT_SUMMARY.md

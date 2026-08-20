@@ -12,8 +12,8 @@ hybrid-retrieval RAG API, not a single-purpose chatbot.
 This project exists to be **read**, not just run. Every non-obvious design
 choice — why RRF instead of raw-score fusion, why regex guardrails instead
 of an LLM self-check, why the UI never imports the backend — has an inline
-"why this works" comment in the code. This README is the map; the code and
-[`docs/CLAUDE.md`](./docs/CLAUDE.md) are the territory.
+"why this works" comment in the code. This README is the map; the code is
+the territory.
 
 No domain-specific logic lives in `app/` — every module is importable and
 usable standalone, and the API carries no assumptions about what kind of
@@ -39,7 +39,6 @@ see [Known limitations](#known-limitations).)
 - [Testing](#testing)
 - [Deployment](#deployment)
 - [Project structure](#project-structure)
-- [Build process & design notes](#build-process--design-notes)
 - [Known limitations](#known-limitations)
 - [License](#license)
 - [Further reading](#further-reading)
@@ -442,35 +441,7 @@ UniRAG/
 ├── render.yaml                Render Blueprint (API + UI) — prepared, unverified
 ├── requirements.txt            API dependencies (unpinned)
 ├── .env.example                settings template
-└── docs/CLAUDE.md                   full build spec + day-by-day progress log (§12)
 ```
-
-## Build process & design notes
-
-Built solo over a 6-day plan (one module group per day) under two hard
-constraints: free/open-source tools only (Groq's free tier, no paid APIs),
-and legibility over completeness. Deliberately dropped to stay in scope:
-LiteLLM, FAISS, Guardrails AI, OpenAI embeddings, MMR retrieval — full
-reasoning for each in `docs/CLAUDE.md` §2-3.
-
-A few of the more interesting things found while building it:
-- **Hybrid retrieval's benefit was subtler than expected in practice** — on
-  this project's small sample corpus, dense search alone already handles
-  literal keyword/ID matches; RRF's visible value here is reconciling
-  runner-up ranks, not rescuing an outright miss (see Key design
-  decisions).
-- **A "grounded" model still answered off-topic questions from training
-  data** until an explicit, exhaustive refusal instruction replaced a soft
-  one — verified against real test cases (`app/graph/nodes.py`).
-- **A week of intermittent "network/cert block" symptoms turned out to be
-  Avast's HTTPS-scanning feature** intercepting TLS to `api.groq.com`/
-  `huggingface.co` with its own certificate — trusted by Windows tools, not
-  by Python's `certifi` store. Nothing was wrong with the code, Groq, or
-  the network. Full story in `docs/CLAUDE.md`'s Day 8 log and environment notes.
-- **Two real test-writing bugs, not just app bugs** — a BM25 IDF=0 edge
-  case on a 2-document corpus needed a 3rd distractor document to expose
-  correctly; the OCR test needed a `skipif` gate since `tesseract` isn't
-  installed on every dev machine.
 
 For a deeper walkthrough of any one mechanism, these modules each carry an
 inline "why this works" comment explaining the reasoning, not just the code:
@@ -482,9 +453,6 @@ inline "why this works" comment explaining the reasoning, not just the code:
 | Cross-encoder rerank | `app/rerank/cross_encoder_rerank.py` |
 | LangGraph structure | `app/graph/build_graph.py` |
 | Guardrail tradeoffs | `app/guardrails/input_guard.py`, `app/guardrails/output_guard.py` |
-
-Full day-by-day build log, every deviation from the original plan (with
-reasoning), and environment notes live in `docs/CLAUDE.md` §12.
 
 ## Known limitations
 
@@ -501,6 +469,4 @@ MIT — see [`LICENSE`](./LICENSE).
 
 ## Further reading
 
-- `docs/CLAUDE.md` — the original build spec, hard constraints, and the full day-by-day progress log (§12) this README's "Build process" section summarizes.
-- `PROJECT_SUMMARY.md` — a fast-recall version of the same build history: tech stack, architecture, status, and known limitations at a glance.
 - `UI_UPGRADE_SPEC.md` — the UI's visual design rationale (dark "technical/lab" aesthetic, palette, why custom CSS was chosen over a framework migration).
