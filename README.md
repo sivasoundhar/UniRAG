@@ -70,21 +70,34 @@ docker compose up --build
 ```
 
 **Without Docker** (needs Python 3.12 and, for image/scanned-doc uploads,
-[Tesseract](https://github.com/tesseract-ocr/tesseract) installed locally):
+[Tesseract](https://github.com/tesseract-ocr/tesseract) installed locally).
+This needs two terminals open at once — `uvicorn --reload` in the first
+keeps running and occupies that terminal, so the second one is for
+Streamlit. Both need the *same* venv **activated separately in each
+terminal** — activating it in terminal 1 doesn't carry over to terminal 2,
+since they're separate shell processes:
 
+Terminal 1 — clone once, create the venv once, then run the API:
 ```bash
 git clone https://github.com/sivasoundhar/UniRAG.git
 cd UniRAG
 cp .env.example .env
 # edit .env, set GROQ_API_KEY=<your key>
 
-python -m venv venv && source venv/Scripts/activate   # venv/bin/activate on Linux/Mac
+python -m venv venv
+source venv/Scripts/activate   # Windows Git Bash. PowerShell: venv\Scripts\Activate.ps1
+                                # Linux/Mac:            source venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload                          # API on :8000
+uvicorn app.main:app --reload  # keep this running — API on :8000
+```
 
-# in a second terminal:
-cd streamlit_app && pip install -r requirements.txt
-streamlit run app.py                                   # UI on :8501
+Terminal 2 — same `UniRAG` folder, reactivate the same venv, run the UI:
+```bash
+cd UniRAG
+source venv/Scripts/activate   # same venv as terminal 1 — see the note above
+cd streamlit_app
+pip install -r requirements.txt
+streamlit run app.py           # UI on :8501
 ```
 
 Full detail on both paths (ports, volumes, what each service needs):
@@ -377,15 +390,25 @@ docker compose up --build
 
 ### Local dev (one venv, two processes)
 
-```bash
-python -m venv venv && source venv/Scripts/activate   # venv/bin/activate on Linux/Mac
-pip install -r requirements.txt
-uvicorn app.main:app --reload                          # API on :8000
+Two terminals, same venv, activated separately in each (activating in one
+terminal doesn't carry over to the other — they're separate shell
+processes):
 
-# in a second terminal:
+```bash
+# Terminal 1 — create the venv once, then run the API
+python -m venv venv
+source venv/Scripts/activate   # Windows Git Bash. PowerShell: venv\Scripts\Activate.ps1
+                                # Linux/Mac:            source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload  # keep this running — API on :8000
+```
+
+```bash
+# Terminal 2 — same repo folder, reactivate the same venv
+source venv/Scripts/activate   # same venv as terminal 1 — see the note above
 cd streamlit_app
 pip install -r requirements.txt
-streamlit run app.py                                   # UI on :8501
+streamlit run app.py           # UI on :8501
 ```
 
 ### Environment
